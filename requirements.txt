@@ -8,8 +8,8 @@ seaborn
 mplfinance==0.12.10b0
 psycopg2-binary
 dj-database-url
-whitenoise
+whitenoise==6.4.0
 waitress
-gunicorn    
+gunicorn==20.1.0
 # pip install pandas matplotlib seaborn djangorestframework mplfinance numpy
 # pip install django-cors-headers
