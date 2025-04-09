@@ -7,6 +7,8 @@ from django.conf.urls.static import static
 from django.urls import path,re_path
 from django.views.decorators.csrf import csrf_exempt
 from .views import csrf_token
+from django.http import JsonResponse
+
 
 urlpatterns = [
     path('api/upload_file/', csrf_exempt(upload_file), name='upload_file'),
