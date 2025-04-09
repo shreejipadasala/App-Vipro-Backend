@@ -8,7 +8,6 @@ seaborn
 mplfinance==0.12.10b0
 psycopg2-binary
 dj-database-url
-gunicorn
 whitenoise
 # pip install pandas matplotlib seaborn djangorestframework mplfinance numpy
 # pip install django-cors-headers
