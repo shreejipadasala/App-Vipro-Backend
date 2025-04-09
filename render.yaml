@@ -2,13 +2,11 @@ services:
   - type: web
     name: vipro-backend
     runtime: python
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn project.wsgi:application"
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn project.wsgi:application
     envVars:
-      - key: 'django-insecure-i@h0inkvdukv#c9fwj41=^b8d&c(q7@a!2z67v=77(7!66=wr!'
-        value: your-secret-key
-      - key: DJANGO_ALLOWED_HOSTS
-        value: SDKAPP.onrender.com
-      - key: DATABASE_URL
-        
-
+      - key: DJANGO_SETTINGS_MODULE
+        value: project.settings
+      - key: PYTHON_VERSION
+        value: 3.11
+    plan: free
