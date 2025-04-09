@@ -1,0 +1,15 @@
+{% comment %} <!DOCTYPE html>
+<html>
+<head>
+    <title>Upload File</title>
+</head>
+<body>
+    <h2>Upload a CSV or JSON File</h2>
+    <form action="http://127.0.0.1:8000/project/upload_file/" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label>Select file:</label><br>
+        <input type="file" name="file"><br><br>
+        <input type="submit" value="Upload">
+    </form>
+</body>
+</html> {% endcomment %}
