@@ -14,6 +14,7 @@ urlpatterns = [
     path('api/get_recommendations/', csrf_exempt(get_recommendations), name='get_recommendations'),
     path('api/download_graph/', csrf_exempt(download_graph), name='download_graph'),
     path('api/csrf_token/', csrf_token, name='csrf_token'),
+    path('', lambda request: JsonResponse({"message": "API is working ✅"})),
     # path('',views.index,name='index'),
     # path('', FrontendAppView.as_view()),
     # path('', TemplateView.as_view(template_name='index.html')),
