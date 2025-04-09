@@ -3,7 +3,7 @@ services:
     name: vipro-backend
     runtime: python
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "waitress-serve --port=8000 project.wsgi:application"
+    startCommand: "gunicorn project.wsgi:application"
     envVars:
       - key: 'django-insecure-i@h0inkvdukv#c9fwj41=^b8d&c(q7@a!2z67v=77(7!66=wr!'
         value: your-secret-key
