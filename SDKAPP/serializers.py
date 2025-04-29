@@ -5,4 +5,3 @@ class FileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UploadedFile
         fields = '__all__'
-    

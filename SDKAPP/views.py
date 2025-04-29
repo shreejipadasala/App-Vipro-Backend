@@ -26,7 +26,7 @@ uploaded_data = None
 # def index(request):
 #     return render(request, 'index.html')
 
-@api_view(['GET'])
+@api_view(['GET','POST'])
 def csrf_token(request):
     return JsonResponse({'csrfToken': get_token(request)})
 
