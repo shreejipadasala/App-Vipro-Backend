@@ -3,7 +3,7 @@ from .views import upload_file, generate_graph, get_recommendations, download_gr
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.decorators.csrf import csrf_exempt
-# from django.http import JsonResponse
+from django.http import JsonResponse
 
 urlpatterns = [
     
@@ -12,7 +12,7 @@ urlpatterns = [
     path('api/get_recommendations', csrf_exempt(get_recommendations), name='get_recommendations'),
     path('api/download_graph', csrf_exempt(download_graph), name='download_graph'),
     path('api/csrf_token', csrf_token, name='csrf_token'),
-    # path('', lambda request: JsonResponse({"message": "API is working ✅"})),
+    path('', lambda request: JsonResponse({"message": "API is working ✅"})),
 ]
 
 if settings.DEBUG:
