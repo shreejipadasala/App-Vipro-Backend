@@ -174,15 +174,25 @@ def generate_graph(request):
     color_all = request.data.get('color_all', False)
     download = request.data.get('download', False)
 
-    if not isinstance(y_columns, list) or len(y_columns) == 0:
-        return Response({"error": "Please provide a list of Y-axis columns"}, status=400)
+    if not x_column:
+        return Response({"error": "X-axis column is required"}, status=400)
+        
+    if not isinstance(y_columns, list):
+        return Response({"error": "Y-columns must be provided as a list"}, status=400)
+        
+    if len(y_columns) == 0:
+        return Response({"error": "At least one Y-axis column is required"}, status=400)
 
     if x_column not in uploaded_data.columns:
-        return Response({"error": "Invalid X-axis column selection"}, status=400)
+        return Response({
+            "error": f"Invalid X-axis column: '{x_column}'. Available columns: {list(uploaded_data.columns)}"
+        }, status=400)
 
-    for y_col in y_columns:   
-        if y_col not in uploaded_data.columns:
-            return Response({"error": f"Invalid Y-axis column: {y_col}"}, status=400)
+    invalid_y_columns = [col for col in y_columns if col not in uploaded_data.columns]
+    if invalid_y_columns:
+        return Response({
+            "error": f"Invalid Y-axis columns: {invalid_y_columns}. Available columns: {list(uploaded_data.columns)}"
+        }, status=400)
 
     try:
         plt.style.use('seaborn-v0_8')
@@ -202,6 +212,9 @@ def generate_graph(request):
         colors = sns.color_palette("tab10", n_colors=len(y_columns))
 
     try:
+        # Initialize chart_data for point click functionality
+        chart_data = []
+        
         if graph_type == 'line':
             for i, y_col in enumerate(y_columns):
                 plt.plot(uploaded_data[x_column], uploaded_data[y_col], 
@@ -209,6 +222,20 @@ def generate_graph(request):
                         marker='o' if len(y_columns) < 5 else '', 
                         linewidth=2, 
                         label=y_col)
+                
+                series_data = []
+                for idx, val in enumerate(uploaded_data[y_col]):
+                    series_data.append({
+                        "x": str(uploaded_data[x_column].iloc[idx]),
+                        "y": float(val) if pd.notna(val) else None,
+                        "label": f"{y_col}: {val}",
+                        "color": colors[i]
+                    })
+                chart_data.append({
+                    "name": y_col,
+                    "data": series_data,
+                    "color": colors[i]
+                })
 
         elif graph_type == 'bar':
             width = 0.8 / len(y_columns)
@@ -221,6 +248,20 @@ def generate_graph(request):
                         color=colors[i], 
                         alpha=0.8,
                         label=y_col)
+                # Prepare data for point clicks
+                series_data = []
+                for idx, val in enumerate(uploaded_data[y_col]):
+                    series_data.append({
+                        "x": str(uploaded_data[x_column].iloc[idx]),
+                        "y": float(val) if pd.notna(val) else None,
+                        "label": f"{y_col}: {val}",
+                        "color": colors[i]
+                    })
+                chart_data.append({
+                    "name": y_col,
+                    "data": series_data,
+                    "color": colors[i]
+                })
 
             plt.xticks([x + (len(y_columns)-1)*width/2 for x in x_values], 
                        uploaded_data[x_column])
@@ -242,6 +283,20 @@ def generate_graph(request):
                     colors=colors[:len(uploaded_data[x_column][mask])],
                     startangle=90,
                     wedgeprops={'linewidth': 1, 'edgecolor': 'white'})
+            
+            # Prepare data for point clicks
+            series_data = []
+            for idx, val in enumerate(uploaded_data[y_col][mask]):
+                series_data.append({
+                    "name": str(uploaded_data[x_column][mask].iloc[idx]),
+                    "value": float(val) if pd.notna(val) else None,
+                    "label": f"{uploaded_data[x_column][mask].iloc[idx]}: {val}",
+                    "color": colors[idx % len(colors)]
+                })
+            chart_data.append({
+                "name": y_col,
+                "data": series_data
+            })
 
         elif graph_type == 'area':
             for i, y_col in enumerate(y_columns):
@@ -255,6 +310,20 @@ def generate_graph(request):
                         color=colors[i], 
                         alpha=0.8,
                         linewidth=1)
+                # Prepare data for point clicks
+                series_data = []
+                for idx, val in enumerate(uploaded_data[y_col]):
+                    series_data.append({
+                        "x": str(uploaded_data[x_column].iloc[idx]),
+                        "y": float(val) if pd.notna(val) else None,
+                        "label": f"{y_col}: {val}",
+                        "color": colors[i]
+                    })
+                chart_data.append({
+                    "name": y_col,
+                    "data": series_data,
+                    "color": colors[i]
+                })
 
         elif graph_type == 'scatter':
             for i, y_col in enumerate(y_columns):
@@ -264,6 +333,20 @@ def generate_graph(request):
                           s=100,
                           alpha=0.7,
                           label=y_col)
+                # Prepare data for point clicks
+                series_data = []
+                for idx, val in enumerate(uploaded_data[y_col]):
+                    series_data.append({
+                        "x": str(uploaded_data[x_column].iloc[idx]),
+                        "y": float(val) if pd.notna(val) else None,
+                        "label": f"{y_col}: {val}",
+                        "color": colors[i]
+                    })
+                chart_data.append({
+                    "name": y_col,
+                    "data": series_data,
+                    "color": colors[i]
+                })
 
         elif graph_type == 'histogram':
             for i, y_col in enumerate(y_columns):
@@ -272,6 +355,21 @@ def generate_graph(request):
                         color=colors[i], 
                         alpha=0.7,
                         label=y_col)
+                # Prepare data for point clicks
+                series_data = []
+                counts, bins = np.histogram(uploaded_data[y_col].dropna(), bins='auto')
+                for idx, (count, bin_edge) in enumerate(zip(counts, bins[:-1])):
+                    series_data.append({
+                        "x": f"{bin_edge:.2f}-{bins[idx+1]:.2f}",
+                        "y": float(count),
+                        "label": f"Bin {idx+1}: {count} items",
+                        "color": colors[i]
+                    })
+                chart_data.append({
+                    "name": y_col,
+                    "data": series_data,
+                    "color": colors[i]
+                })
 
         elif graph_type == 'box':
             data_to_plot = [uploaded_data[col] for col in y_columns]
@@ -282,6 +380,29 @@ def generate_graph(request):
             for patch, color in zip(box['boxes'], colors):
                 patch.set_facecolor(color)
                 patch.set_alpha(0.7)
+            
+            # Prepare data for point clicks
+            for i, y_col in enumerate(y_columns):
+                series_data = []
+                stats = {
+                    'min': uploaded_data[y_col].min(),
+                    'q1': uploaded_data[y_col].quantile(0.25),
+                    'median': uploaded_data[y_col].median(),
+                    'q3': uploaded_data[y_col].quantile(0.75),
+                    'max': uploaded_data[y_col].max()
+                }
+                for stat, val in stats.items():
+                    series_data.append({
+                        "x": stat,
+                        "y": float(val) if pd.notna(val) else None,
+                        "label": f"{y_col} {stat}: {val}",
+                        "color": colors[i]
+                    })
+                chart_data.append({
+                    "name": y_col,
+                    "data": series_data,
+                    "color": colors[i]
+                })
 
         elif graph_type == 'violin':
             data_to_plot = [uploaded_data[col] for col in y_columns]
@@ -294,6 +415,28 @@ def generate_graph(request):
                 patch.set_alpha(0.7)
 
             plt.xticks(range(1, len(y_columns)+1), y_columns)
+            
+            # Prepare data for point clicks
+            for i, y_col in enumerate(y_columns):
+                series_data = []
+                stats = {
+                    'min': uploaded_data[y_col].min(),
+                    'mean': uploaded_data[y_col].mean(),
+                    'median': uploaded_data[y_col].median(),
+                    'max': uploaded_data[y_col].max()
+                }
+                for stat, val in stats.items():
+                    series_data.append({
+                        "x": stat,
+                        "y": float(val) if pd.notna(val) else None,
+                        "label": f"{y_col} {stat}: {val}",
+                        "color": colors[i]
+                    })
+                chart_data.append({
+                    "name": y_col,
+                    "data": series_data,
+                    "color": colors[i]
+                })
 
         elif graph_type == 'funnel':
             y_col = y_columns[0]
@@ -301,6 +444,20 @@ def generate_graph(request):
                     uploaded_data[y_col], 
                     color=colors[:len(uploaded_data[x_column])])
             plt.gca().invert_yaxis()
+            
+            # Prepare data for point clicks
+            series_data = []
+            for idx, val in enumerate(uploaded_data[y_col]):
+                series_data.append({
+                    "x": str(uploaded_data[x_column].iloc[idx]),
+                    "y": float(val) if pd.notna(val) else None,
+                    "label": f"{uploaded_data[x_column].iloc[idx]}: {val}",
+                    "color": colors[idx % len(colors)]
+                })
+            chart_data.append({
+                "name": y_col,
+                "data": series_data
+            })
 
         elif graph_type == 'sunburst':
             if len(y_columns) != 1:
@@ -319,6 +476,20 @@ def generate_graph(request):
                     colors=colors[:len(uploaded_data[x_column][mask])],
                     startangle=90,
                     wedgeprops=dict(width=0.5, edgecolor='w'))
+            
+            # Prepare data for point clicks
+            series_data = []
+            for idx, val in enumerate(uploaded_data[y_col][mask]):
+                series_data.append({
+                    "name": str(uploaded_data[x_column][mask].iloc[idx]),
+                    "value": float(val) if pd.notna(val) else None,
+                    "label": f"{uploaded_data[x_column][mask].iloc[idx]}: {val}",
+                    "color": colors[idx % len(colors)]
+                })
+            chart_data.append({
+                "name": y_col,
+                "data": series_data
+            })
 
         elif graph_type == 'waterfall':
             y_col = y_columns[0]
@@ -327,6 +498,20 @@ def generate_graph(request):
                    uploaded_data[y_col], 
                    bottom=values - uploaded_data[y_col],
                    color=colors[:len(uploaded_data[x_column])])
+            
+            # Prepare data for point clicks
+            series_data = []
+            for idx, val in enumerate(uploaded_data[y_col]):
+                series_data.append({
+                    "x": str(uploaded_data[x_column].iloc[idx]),
+                    "y": float(val) if pd.notna(val) else None,
+                    "label": f"{uploaded_data[x_column].iloc[idx]}: {val}",
+                    "color": colors[idx % len(colors)]
+                })
+            chart_data.append({
+                "name": y_col,
+                "data": series_data
+            })
 
         elif graph_type == 'combo':
             if len(y_columns) < 2:
@@ -354,6 +539,22 @@ def generate_graph(request):
                            marker=markers[(i-2) % len(markers)],
                            linewidth=2,
                            label=y_columns[i])
+            
+            # Prepare data for point clicks
+            for i, y_col in enumerate(y_columns):
+                series_data = []
+                for idx, val in enumerate(uploaded_data[y_col]):
+                    series_data.append({
+                        "x": str(uploaded_data[x_column].iloc[idx]),
+                        "y": float(val) if pd.notna(val) else None,
+                        "label": f"{y_col}: {val}",
+                        "color": colors[i]
+                    })
+                chart_data.append({
+                    "name": y_col,
+                    "data": series_data,
+                    "color": colors[i]
+                })
 
         elif graph_type == 'stock':
             if len(y_columns) < 4:
@@ -424,6 +625,23 @@ def generate_graph(request):
                 
                 plt.tight_layout()
                 
+                # Prepare data for point clicks
+                series_data = []
+                for idx, row in resampled_df.iterrows():
+                    series_data.append({
+                        "x": str(idx),
+                        "open": float(row[y_columns[0]]) if pd.notna(row[y_columns[0]]) else None,
+                        "high": float(row[y_columns[1]]) if pd.notna(row[y_columns[1]]) else None,
+                        "low": float(row[y_columns[2]]) if pd.notna(row[y_columns[2]]) else None,
+                        "close": float(row[y_columns[3]]) if pd.notna(row[y_columns[3]]) else None,
+                        "label": f"{idx}: O:{row[y_columns[0]]} H:{row[y_columns[1]]} L:{row[y_columns[2]]} C:{row[y_columns[3]]}",
+                        "color": 'green' if row[y_columns[3]] >= row[y_columns[0]] else 'red'
+                    })
+                chart_data.append({
+                    "name": "Stock Data",
+                    "data": series_data
+                })
+                
             except Exception as e:
                 plt.close('all')
                 return Response({"error": f"Failed to generate stock chart: {str(e)}"}, status=400)
@@ -461,16 +679,24 @@ def generate_graph(request):
             return Response({
                 "graph": encoded_image,
                 "graph_type": graph_type,
-                "colors_used": colors[:len(y_columns)]
+                "colors_used": colors[:len(y_columns)],
+                "chart_data": chart_data,
+                "x_column": x_column,
+                "y_columns": y_columns
             })
 
     except Exception as e:
         plt.close()
         return Response({"error": f"Graph generation failed: {str(e)}"}, status=500)
-
+    
 @api_view(['POST'])
 @csrf_exempt
 def download_graph(request):
     """Endpoint specifically for downloading graphs"""
-    request.data['download'] = True
-    return generate_graph(request)
+    try:
+        request.data['download'] = True
+        return generate_graph(request)
+    except Exception as e:
+        return Response({
+            "error": f"Download failed: {str(e)}"
+        }, status=500)
